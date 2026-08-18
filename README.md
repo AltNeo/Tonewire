@@ -1,5 +1,7 @@
 # Tonewire
 
+[![Android build](https://github.com/AltNeo/Tonewire/actions/workflows/android.yml/badge.svg)](https://github.com/AltNeo/Tonewire/actions/workflows/android.yml)
+
 Tonewire is a local-first Android phone remote and Android TV equalizer service. It provides
 real-time control of a TV's session-0 hardware equalizer without requiring a cloud service or a
 large TV-side user interface.
