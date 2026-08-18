@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#101311">
+    <title>Tonewire — TV equalizer remote concept</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="ambient ambient-one" aria-hidden="true"></div>
+    <div class="ambient ambient-two" aria-hidden="true"></div>
+
+    <header class="site-header">
+        <a class="wordmark" href="#" aria-label="Tonewire home">
+            <span class="wordmark-mark" aria-hidden="true">
+                <i></i><i></i><i></i><i></i>
+            </span>
+            <span>TONEWIRE</span>
+        </a>
+        <div class="prototype-label">
+            <span></span>
+            Interactive product concept
+        </div>
+    </header>
+
+    <main>
+        <section class="intro">
+            <p class="eyebrow">REMOTE AUDIO CONTROL / ANDROID TV</p>
+            <h1>Shape the room.<br><em>Never leave the sofa.</em></h1>
+            <p class="intro-copy">
+                A live, local-only equalizer remote for a lightweight Android 9 TV service.
+                Drag a band below—the TV state updates immediately.
+            </p>
+        </section>
+
+        <section class="prototype-stage" aria-label="Interactive phone and TV mockups">
+            <div class="stage-tabs" role="tablist" aria-label="Prototype view">
+                <button class="stage-tab active" data-stage="tune" role="tab" aria-selected="true">
+                    Live tuning
+                </button>
+                <button class="stage-tab" data-stage="pair" role="tab" aria-selected="false">
+                    First-time setup
+                </button>
+            </div>
+
+            <div class="device-layout">
+                <article class="phone-device" aria-label="Phone app mockup">
+                    <div class="phone-hardware">
+                        <div class="phone-speaker" aria-hidden="true"></div>
+                        <div class="phone-screen">
+                            <div class="status-bar" aria-hidden="true">
+                                <span>9:41</span>
+                                <span class="status-icons">● ◒ ▰</span>
+                            </div>
+
+                            <div class="phone-view tune-view active" data-view="tune">
+                                <header class="app-header">
+                                    <div>
+                                        <p class="micro-label">LIVING ROOM</p>
+                                        <h2>Good evening.</h2>
+                                    </div>
+                                    <button class="connection-badge" aria-label="Connected to TV">
+                                        <span></span> LIVE
+                                    </button>
+                                </header>
+
+                                <button class="output-card" id="output-card">
+                                    <span class="route-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24">
+                                            <path d="M7 8h10v8H7zM9 4h6v4H9zM10 16v4m4-4v4M5 11H3m18 0h-2"/>
+                                        </svg>
+                                    </span>
+                                    <span class="output-copy">
+                                        <small>ACTIVE OUTPUT</small>
+                                        <strong id="phone-route-name">USB · Bluetooth dongle</strong>
+                                    </span>
+                                    <span class="output-chevron">›</span>
+                                </button>
+
+                                <div class="preset-row">
+                                    <div>
+                                        <p class="micro-label">ROUTE PRESET</p>
+                                        <strong id="preset-title">Cinema warmth</strong>
+                                    </div>
+                                    <div class="preset-actions">
+                                        <button class="mini-button" id="ab-button">A / B</button>
+                                        <button class="mini-button reset-button" id="reset-button">RESET</button>
+                                    </div>
+                                </div>
+
+                                <div class="curve-card">
+                                    <div class="curve-head">
+                                        <span>LIVE RESPONSE</span>
+                                        <span class="latency"><i></i> 18 ms</span>
+                                    </div>
+                                    <svg class="response-curve" viewBox="0 0 320 86" role="img"
+                                         aria-label="Equalizer frequency response curve">
+                                        <defs>
+                                            <linearGradient id="curveFill" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stop-color="#d9ff6b" stop-opacity=".34"/>
+                                                <stop offset="100%" stop-color="#d9ff6b" stop-opacity="0"/>
+                                            </linearGradient>
+                                        </defs>
+                                        <path class="curve-grid" d="M0 18H320M0 43H320M0 68H320"/>
+                                        <path id="curve-area" class="curve-area"
+                                              d="M0 43 C32 43 48 31 80 31 S128 47 160 47 S208 25 240 25 S288 43 320 43 L320 86 L0 86Z"/>
+                                        <path id="curve-line" class="curve-line"
+                                              d="M0 43 C32 43 48 31 80 31 S128 47 160 47 S208 25 240 25 S288 43 320 43"/>
+                                    </svg>
+                                </div>
+
+                                <div class="equalizer-head">
+                                    <p class="micro-label">5-BAND HARDWARE EQ</p>
+                                    <button class="power-toggle active" id="power-toggle" role="switch"
+                                            aria-checked="true" aria-label="Equalizer enabled">
+                                        <span></span>
+                                    </button>
+                                </div>
+
+                                <div class="equalizer" id="equalizer">
+                                    <label class="band">
+                                        <output>+4</output>
+                                        <input type="range" min="-15" max="15" value="4" data-frequency="60"
+                                               orient="vertical" aria-label="60 hertz">
+                                        <span>60</span><small>Hz</small>
+                                    </label>
+                                    <label class="band">
+                                        <output>+2</output>
+                                        <input type="range" min="-15" max="15" value="2" data-frequency="230"
+                                               orient="vertical" aria-label="230 hertz">
+                                        <span>230</span><small>Hz</small>
+                                    </label>
+                                    <label class="band">
+                                        <output>-1</output>
+                                        <input type="range" min="-15" max="15" value="-1" data-frequency="910"
+                                               orient="vertical" aria-label="910 hertz">
+                                        <span>910</span><small>Hz</small>
+                                    </label>
+                                    <label class="band">
+                                        <output>+3</output>
+                                        <input type="range" min="-15" max="15" value="3" data-frequency="3600"
+                                               orient="vertical" aria-label="3.6 kilohertz">
+                                        <span>3.6k</span><small>Hz</small>
+                                    </label>
+                                    <label class="band">
+                                        <output>+1</output>
+                                        <input type="range" min="-15" max="15" value="1" data-frequency="14000"
+                                               orient="vertical" aria-label="14 kilohertz">
+                                        <span>14k</span><small>Hz</small>
+                                    </label>
+                                </div>
+
+                                <p class="live-note" id="live-note">
+                                    <span></span> Changes are applied as you move
+                                </p>
+                            </div>
+
+                            <div class="phone-view presets-view" data-view="presets">
+                                <header class="subpage-header">
+                                    <p class="micro-label">SOUND LIBRARY</p>
+                                    <h2>Presets</h2>
+                                    <p>Saved curves follow the output you assign them to.</p>
+                                </header>
+                                <div class="featured-preset">
+                                    <p>ACTIVE ON USB</p>
+                                    <h3>Cinema<br>warmth</h3>
+                                    <div class="preset-bars" aria-hidden="true">
+                                        <i style="height: 65%"></i><i style="height: 48%"></i>
+                                        <i style="height: 34%"></i><i style="height: 58%"></i>
+                                        <i style="height: 43%"></i>
+                                    </div>
+                                    <button>EDIT CURVE</button>
+                                </div>
+                                <div class="preset-list">
+                                    <button><span>01</span><strong>Clear dialogue</strong><small>TV SPEAKERS</small></button>
+                                    <button><span>02</span><strong>Night watch</strong><small>ANY OUTPUT</small></button>
+                                    <button><span>03</span><strong>Flat reference</strong><small>ANY OUTPUT</small></button>
+                                    <button class="new-preset"><span>+</span><strong>New preset</strong></button>
+                                </div>
+                            </div>
+
+                            <div class="phone-view devices-view" data-view="devices">
+                                <header class="subpage-header">
+                                    <p class="micro-label">ROUTING</p>
+                                    <h2>Outputs</h2>
+                                    <p>Each route can recall its own curve automatically.</p>
+                                </header>
+                                <div class="device-card selected" data-route-card="usb">
+                                    <div class="device-card-top">
+                                        <span class="large-route-icon">USB</span>
+                                        <span class="active-pill">ACTIVE</span>
+                                    </div>
+                                    <h3>Bluetooth dongle</h3>
+                                    <p>USB Audio · Device 2812</p>
+                                    <div class="assigned-preset">
+                                        <span>AUTO PRESET</span><strong>Cinema warmth</strong>
+                                    </div>
+                                </div>
+                                <div class="device-card" data-route-card="speaker">
+                                    <div class="device-card-top">
+                                        <span class="large-route-icon speaker">SPK</span>
+                                    </div>
+                                    <h3>TV speakers</h3>
+                                    <p>Built-in output</p>
+                                    <div class="assigned-preset">
+                                        <span>AUTO PRESET</span><strong>Clear dialogue</strong>
+                                    </div>
+                                </div>
+                                <div class="automation-row">
+                                    <div><strong>Switch presets with output</strong><small>Uses route fingerprints</small></div>
+                                    <button class="power-toggle active" role="switch" aria-checked="true"><span></span></button>
+                                </div>
+                            </div>
+
+                            <div class="phone-view settings-view" data-view="settings">
+                                <header class="subpage-header">
+                                    <p class="micro-label">SYSTEM</p>
+                                    <h2>TV service</h2>
+                                    <p>Everything runs locally on your home network.</p>
+                                </header>
+                                <div class="service-orbit">
+                                    <div class="orbit-ring"><span></span></div>
+                                    <strong>ONLINE</strong>
+                                    <small>Living Room TV</small>
+                                </div>
+                                <dl class="service-stats">
+                                    <div><dt>Control latency</dt><dd>18 ms</dd></div>
+                                    <div><dt>Engine</dt><dd>Android AudioEffect</dd></div>
+                                    <div><dt>Service memory</dt><dd>~18 MB target</dd></div>
+                                    <div><dt>Autostart</dt><dd class="good">Enabled</dd></div>
+                                </dl>
+                                <button class="settings-button">PAIR ANOTHER TV <span>›</span></button>
+                                <button class="settings-button">DIAGNOSTICS <span>›</span></button>
+                            </div>
+
+                            <nav class="bottom-nav" aria-label="Phone app navigation">
+                                <button class="active" data-nav="tune">
+                                    <svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M10 17h10M4 17h2M14 4v6M10 14v6"/></svg>
+                                    <span>Tune</span>
+                                </button>
+                                <button data-nav="presets">
+                                    <svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 9h8M8 13h5"/></svg>
+                                    <span>Presets</span>
+                                </button>
+                                <button data-nav="devices">
+                                    <svg viewBox="0 0 24 24"><path d="M7 8h10v8H7zM9 4h6v4M10 16v4m4-4v4"/></svg>
+                                    <span>Outputs</span>
+                                </button>
+                                <button data-nav="settings">
+                                    <svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/></svg>
+                                    <span>System</span>
+                                </button>
+                            </nav>
+                        </div>
+                    </div>
+                    <p class="device-caption"><span>01</span> PHONE / DAILY CONTROL</p>
+                </article>
+
+                <div class="signal-path" aria-hidden="true">
+                    <span></span><i></i><i></i><i></i><span></span>
+                    <small>LOCAL WI-FI</small>
+                </div>
+
+                <article class="tv-device" aria-label="TV app mockup">
+                    <div class="tv-hardware">
+                        <div class="tv-screen">
+                            <div class="tv-tune-view active" data-tv-view="tune">
+                                <div class="tv-topline">
+                                    <div class="wordmark tv-wordmark">
+                                        <span class="wordmark-mark"><i></i><i></i><i></i><i></i></span>
+                                        <span>TONEWIRE</span>
+                                    </div>
+                                    <span class="tv-clock">21:41</span>
+                                </div>
+                                <div class="tv-content">
+                                    <div class="tv-copy">
+                                        <p class="micro-label">AUDIO SERVICE IS RUNNING</p>
+                                        <h2>Your sound,<br><em>quietly handled.</em></h2>
+                                        <p>No controls needed here. Use the paired phone to tune sound while you watch.</p>
+                                        <div class="tv-connection">
+                                            <span class="phone-glyph"></span>
+                                            <div><small>CONNECTED</small><strong>Your phone</strong></div>
+                                            <i></i>
+                                        </div>
+                                    </div>
+                                    <div class="now-playing-card">
+                                        <div class="now-playing-head">
+                                            <span>NOW ACTIVE</span>
+                                            <button class="tv-power active"><i></i> EQ ON</button>
+                                        </div>
+                                        <div class="tv-route-visual">
+                                            <span class="route-rings"></span>
+                                            <span class="usb-glyph">USB</span>
+                                        </div>
+                                        <p>OUTPUT</p>
+                                        <h3 id="tv-route-name">Bluetooth dongle</h3>
+                                        <div class="tv-preset">
+                                            <span>PRESET</span><strong id="tv-preset-name">Cinema warmth</strong>
+                                        </div>
+                                        <div class="tv-mini-eq" id="tv-mini-eq" aria-hidden="true">
+                                            <i style="height: 65%"></i><i style="height: 56%"></i>
+                                            <i style="height: 40%"></i><i style="height: 60%"></i>
+                                            <i style="height: 50%"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="tv-footer">
+                                    <span><i></i> Engine healthy</span>
+                                    <span>Android AudioEffect · 5 bands</span>
+                                    <span>Local network only</span>
+                                </div>
+                            </div>
+
+                            <div class="tv-pair-view" data-tv-view="pair">
+                                <div class="pair-brand">
+                                    <div class="wordmark tv-wordmark">
+                                        <span class="wordmark-mark"><i></i><i></i><i></i><i></i></span>
+                                        <span>TONEWIRE</span>
+                                    </div>
+                                    <span>SETUP / 01</span>
+                                </div>
+                                <div class="pair-content">
+                                    <div>
+                                        <p class="micro-label">WELCOME</p>
+                                        <h2>Pair your<br><em>phone.</em></h2>
+                                        <p>Open Tonewire on your phone. It will find this TV on the same Wi‑Fi network.</p>
+                                    </div>
+                                    <div class="pair-code-card">
+                                        <small>ENTER THIS CODE</small>
+                                        <strong>482 193</strong>
+                                        <div class="code-timer"><span></span><p>Code refreshes in 04:28</p></div>
+                                    </div>
+                                </div>
+                                <div class="pair-footer">
+                                    <span>Living Room TV</span>
+                                    <span>192.0.2.42 · Local only</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tv-chin"><span>TONEWIRE</span></div>
+                        <div class="tv-stand"></div>
+                    </div>
+                    <p class="device-caption tv-caption"><span>02</span> TV / SETUP + STATUS ONLY</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="principles">
+            <p class="eyebrow">PRODUCT PRINCIPLES</p>
+            <div class="principle-grid">
+                <article>
+                    <span>01</span>
+                    <h3>Hear every move</h3>
+                    <p>Slider changes stream immediately; persistence happens later so storage never sits in the live path.</p>
+                </article>
+                <article>
+                    <span>02</span>
+                    <h3>The TV stays quiet</h3>
+                    <p>A tiny foreground service does the work. The TV interface exists only for pairing, status, and recovery.</p>
+                </article>
+                <article>
+                    <span>03</span>
+                    <h3>Routes remember</h3>
+                    <p>USB audio and built-in speakers receive independent presets, recalled when Android reports a route change.</p>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <span>TONEWIRE / CONCEPT 01</span>
+        <a href="docs/feasibility.md">Read the technical feasibility brief ↗</a>
+    </footer>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+</body>
+</html>

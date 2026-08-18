@@ -1,0 +1,24 @@
+# Android and Gradle
+.gradle/
+**/.gradle/
+build/
+**/build/
+local.properties
+*.apk
+*.aab
+
+# IDE and editor state
+.idea/
+*.iml
+.vscode/
+
+# Local tooling and generated evidence
+.codex-remote-attachments/
+.playwright-cli/
+output/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini

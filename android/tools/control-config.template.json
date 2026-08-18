@@ -1,0 +1,9 @@
+{
+  "phonePackage": "com.tonewire.phone",
+  "phoneActivity": ".PhoneMainActivity",
+  "manualTvAddress": "192.0.2.42:49321",
+  "minimumMillibels": -1500,
+  "maximumMillibels": 1500,
+  "testCurveMb": [-600, -300, -300, -600, -600],
+  "notes": "Use the port shown by the TV status screen. Never place pairing codes or tokens here. Test curve must be cut-only."
+}

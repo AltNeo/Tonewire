@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Tonewire TV</string>
+    <string name="notification_channel_name">Tonewire service</string>
+    <string name="notification_text">Service scaffold ready for engine setup</string>
+</resources>
