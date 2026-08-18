@@ -1,59 +1,97 @@
 # Tonewire
 
-Local-first Android phone remote and Android TV equalizer service for real-time, session-0 control.
-The physical built-in-speaker PCM path has been validated end to end: the phone emulator paired to
-the TV over the production LAN protocol, changed the NXP Equalizer during Spotify playback, and
-restored the original state.
+Tonewire is a local-first Android phone remote and Android TV equalizer service. It provides
+real-time control of a TV's session-0 hardware equalizer without requiring a cloud service or a
+large TV-side user interface.
 
-## View the mockup
+The project contains two deliverables:
 
-Open `index.html` directly in a browser, or serve the folder locally:
+- An Android TV foreground service that owns the equalizer, watches audio routes, recalls presets,
+  and accepts authenticated local-network commands.
+- An Android phone remote that discovers and pairs with the TV, displays advertised equalizer
+  capabilities, and streams live band changes.
+
+The verified target is a CloudWalker Android 9/API 28 TV with a five-band NXP equalizer. The
+architecture queries capabilities at runtime rather than assuming that every device has five
+bands.
+
+## Features
+
+- Five-band live equalizer controls
+- Runtime capability and gain-range discovery
+- Built-in speaker and USB route support
+- Route-specific preset recall
+- DNS-SD discovery and manual IP fallback
+- Short-lived pairing code and Keystore-backed token storage
+- Bounded framed protocol with HMAC authentication and revisions
+- Boot-started TV service with clean state restoration
+- Dependency-free interactive web concept at the repository root
+
+## Preview the concept
+
+Open [`index.html`](index.html) directly, or serve the repository locally:
 
 ```powershell
 npx serve .
 ```
 
-The mockup includes:
+The mockup demonstrates live tuning, route switching, preset recall, first-time pairing, TV
+status, and the phone navigation model. It has no build step or runtime dependencies.
 
-- live five-band controls with a synchronized TV state
-- output switching between a USB Bluetooth dongle and built-in TV speakers
-- per-output preset recall
-- preset, output, and TV-service phone screens
-- TV status and first-time pairing screens
+## Build the Android apps
 
-The implementation is dependency-free and uses no build step.
+Requirements:
 
-## Android app
+- JDK 17
+- Android SDK Platform 34
+- Android Build-Tools 34.0.0 or newer
 
-The Android workspace is in [`android/`](android/), with Java/Android Views modules for the TV,
-phone, and shared authenticated local protocol.
-
-Build and verify from `android/`:
+From [`android/`](android/):
 
 ```powershell
 .\gradlew.bat verify build
 ```
 
-Start the development phone AVD, then install both debug APKs on explicit targets:
+This runs JVM tests, Android lint, and debug/minified release builds for the protocol, TV, and
+phone modules. Debug APKs are written to:
 
-```powershell
-.\tools\start-medium-phone-emulator.ps1
-.\tools\install-debug-apks.ps1 -PhoneSerial emulator-5554 -TvSerial 192.0.2.42:5555
+- `android/tv/build/outputs/apk/debug/tv-debug.apk`
+- `android/phone/build/outputs/apk/debug/phone-debug.apk`
+
+See [`android/docs/BUILDING.md`](android/docs/BUILDING.md) for toolchain details and
+[`android/docs/END_TO_END_VERIFICATION.md`](android/docs/END_TO_END_VERIFICATION.md) for the
+attended physical-device workflow.
+
+## Physical validation
+
+The built-in-speaker PCM path passed physical end-to-end validation: a phone emulator paired with
+the TV over the production LAN protocol, changed the equalizer during playback, and restored the
+original state.
+
+USB validation remains pending reconnection of the Bluetooth transmitter. Compressed and direct
+passthrough paths may bypass the software effect and remain unverified. Evidence and limitations
+are documented in [`android/docs/PHYSICAL_TEST_REPORT.md`](android/docs/PHYSICAL_TEST_REPORT.md).
+
+## Security scope
+
+Tonewire v0.1 assumes a trusted home LAN and must not be exposed directly to the public internet.
+The pairing flow uses a short-lived code, and post-pairing credentials are stored using Android
+Keystore-backed encryption. Known network-hardening limitations are documented in
+[`SECURITY.md`](SECURITY.md).
+
+## Repository layout
+
+```text
+android/
+  phone/       Android phone remote
+  protocol/    Shared protocol models and codecs
+  tv/          Android TV service and status app
+  tools/       Build, installation, evidence, and E2E scripts
+diagnostics/   Hardware capability probes
+docs/          Feasibility research and device reports
+index.html     Interactive product concept
 ```
 
-Tonewire uses stable local port `49321` for phone control; `5555` above is only the trusted-LAN ADB
-endpoint. Detailed build, safety, and evidence workflows are in
-[`android/docs/BUILDING.md`](android/docs/BUILDING.md) and
-[`android/docs/END_TO_END_VERIFICATION.md`](android/docs/END_TO_END_VERIFICATION.md).
+## License
 
-## Validation status
-
-The built-in speaker PCM path passed physical end-to-end validation. See
-[`android/docs/PHYSICAL_TEST_REPORT.md`](android/docs/PHYSICAL_TEST_REPORT.md) for evidence,
-latency, memory, effect-chain, restoration, and limitations. USB validation remains pending the
-USB Bluetooth transmitter being reconnected; compressed/direct passthrough remains unverified.
-
-## Research
-
-See [`docs/feasibility.md`](docs/feasibility.md) for the technical constraints, architecture,
-existing-product research, performance targets, and staged delivery plan.
+Released under the [MIT License](LICENSE).
