@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId = "com.tonewire.tv"
-        minSdk = 28
+        minSdk = 31
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
@@ -32,6 +32,10 @@ android {
         abortOnError = true
         checkReleaseBuilds = true
     }
+}
+
+tasks.withType<Test>().configureEach {
+    inputs.file("src/main/AndroidManifest.xml")
 }
 
 dependencies {

@@ -30,6 +30,21 @@ public final class AudioRoute {
     public String getAddress() { return address; }
     public int getDeviceId() { return deviceId; }
 
+    public String getDisplayName() {
+        String label;
+        switch (kind) {
+            case SPEAKER: label = "Speakers"; break;
+            case HDMI: label = "HDMI"; break;
+            case HDMI_ARC: label = "HDMI ARC"; break;
+            case USB_DEVICE: label = "USB audio"; break;
+            case USB_HEADSET: label = "USB headset"; break;
+            case BLUETOOTH: label = "Bluetooth"; break;
+            default: label = "Audio output";
+        }
+        return productName.isEmpty() || label.equalsIgnoreCase(productName)
+                ? label : label + " · " + productName;
+    }
+
     public String getFingerprint() {
         String identity = !address.isEmpty() ? address : (!productName.isEmpty() ? productName : "id-" + deviceId);
         return kind.name().toLowerCase(Locale.US) + ":" + identity.toLowerCase(Locale.US);

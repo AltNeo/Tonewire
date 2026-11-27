@@ -6,7 +6,7 @@ import android.net.nsd.NsdServiceInfo;
 
 /** DNS-SD discovery with a manual-IP path retained by the activity. */
 public final class TvDiscovery {
-    public interface Listener { void onFound(String name, String host, int port); void onError(String message); }
+    public interface Listener { void onFound(String name, String host, int port, String tvId); void onError(String message); }
     private final NsdManager manager;
     private NsdManager.DiscoveryListener discovery;
     private final Listener listener;
@@ -30,7 +30,9 @@ public final class TvDiscovery {
                     @Override public void onResolveFailed(NsdServiceInfo ignored, int code) { }
                     @Override public void onServiceResolved(NsdServiceInfo resolved) {
                         if (resolved.getHost() != null) listener.onFound(resolved.getServiceName(),
-                                resolved.getHost().getHostAddress(), resolved.getPort());
+                                resolved.getHost().getHostAddress(), resolved.getPort(),
+                                resolved.getAttributes().containsKey("tv_id")
+                                        ? new String(resolved.getAttributes().get("tv_id"), java.nio.charset.StandardCharsets.UTF_8) : "");
                     }
                 });
             }

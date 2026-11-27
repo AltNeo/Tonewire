@@ -31,7 +31,7 @@ import java.util.concurrent.RejectedExecutionException;
 /** Persistent, authenticated v1 TCP client; all shared-protocol mapping lives here. */
 public final class TvConnectionClient {
     private static final String TAG = "TonewirePhone";
-    public interface Listener { void onState(PhoneState state); void onPairingRequired(); void onPairingAccepted(String token); void onError(String message); }
+    public interface Listener { void onState(PhoneState state); void onPairingRequired(); void onPairingAccepted(String token); void onError(String message); default void onTvIdentity(String tvId) { } default void onCommandRejected(String detail) { onError(detail); } }
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private final ExecutorService writerIo = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -48,7 +48,9 @@ public final class TvConnectionClient {
     private final String deviceId;
     private String clientNonce;
     private String serverNonce;
+    private String serverTvId = "";
     private volatile String pendingPairCode;
+    private final RejectionResync rejectionResync = new RejectionResync();
     private final OptimisticRevision revisions = new OptimisticRevision();
     private final ConcurrentHashMap<Long, Long> mutationSentAt = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Long, String> mutationTypes = new ConcurrentHashMap<>();
@@ -76,6 +78,12 @@ public final class TvConnectionClient {
     public void requestState() { send(ProtocolMessages.stateGet(revisions.current())); }
     public void setEnabled(boolean enabled) { send(ProtocolMessages.eqEnable(revisions.allocateExpected(), enabled)); }
     public void setBand(int index, int millibels) { send(ProtocolMessages.eqBandSet(revisions.allocateExpected(), index, millibels)); }
+    public void savePreset(String name) {
+        send(new ProtocolMessage(ProtocolTypes.EQ_PRESET_SAVE, revisions.allocateExpected(), java.util.Collections.singletonMap("name", name)));
+    }
+    public void deletePreset(String id) {
+        send(new ProtocolMessage(ProtocolTypes.EQ_PRESET_DELETE, revisions.allocateExpected(), java.util.Collections.singletonMap("preset_id", id)));
+    }
     public void applyPreset(String presetId) { send(ProtocolMessages.presetApply(revisions.allocateExpected(), safeId(presetId))); }
 
     private void connectLoop(long generation, int attempt) {
@@ -86,11 +94,15 @@ public final class TvConnectionClient {
             BufferedWriter connectedWriter = new BufferedWriter(new OutputStreamWriter(connected.getOutputStream(), StandardCharsets.US_ASCII));
             synchronized (connectionLock) {
                 if (stopped || !generations.isCurrent(generation)) return;
+                revisions.resetForConnection();
+                rejectionResync.receivedSnapshot();
+                mutationSentAt.clear();
+                mutationTypes.clear();
                 socket = connected;
                 writer = connectedWriter;
                 Log.i(TAG, "published socket gen=" + generation + " socket=" + socketId(connected));
             }
-            clientNonce = nonce(); readLoop(connected);
+            clientNonce = nonce(); readLoop(connected, generation);
         } catch (Exception exception) {
             Log.i(TAG, "connect/read exit gen=" + generation + " socket=" + socketId(connected)
                     + " reason=" + exception.getClass().getSimpleName());
@@ -101,7 +113,7 @@ public final class TvConnectionClient {
         } finally { closeOwnedSocket(connected, generation); }
     }
 
-    private void readLoop(Socket connected) throws Exception {
+    private void readLoop(Socket connected, long generation) throws Exception {
         connected.setSoTimeout(10_000);
         InputStream input = connected.getInputStream();
         FrameDecoder decoder = new FrameDecoder();
@@ -119,17 +131,21 @@ public final class TvConnectionClient {
             }
             if (count == -1) break;
             heartbeatPending = false;
-            for (ProtocolMessage message : decoder.accept(buffer, 0, count)) receive(message);
+            for (ProtocolMessage message : decoder.accept(buffer, 0, count)) {
+                if (!generations.isCurrent(generation)) return;
+                receive(message, generation);
+            }
         }
         Log.i(TAG, "read loop ended socket=" + socketId(connected) + " stopped=" + stopped);
         if (!stopped) throw new IOException("TV closed the connection");
     }
 
-    private void receive(ProtocolMessage message) {
+    private void receive(ProtocolMessage message, long generation) {
         try {
             Log.i(TAG, "recv type=" + message.getType() + " revision=" + message.getRevision());
             if (ProtocolTypes.HELLO.equals(message.getType())) {
                 serverNonce = message.requireField("nonce");
+                serverTvId = message.getFields().getOrDefault("tv_id", "");
                 if (token.isEmpty()) {
                     if (pendingPairCode != null) send(ProtocolMessages.pairRequest(deviceId, pendingPairCode, nonce()));
                     else main.post(listener::onPairingRequired);
@@ -142,27 +158,50 @@ public final class TvConnectionClient {
                 send(ProtocolAuthenticator.authToken(AuthToken.fromBase64(token), deviceId, clientNonce, serverNonce));
                 main.post(() -> listener.onPairingAccepted(pairingToken));
             } else if (ProtocolTypes.AUTH_TOKEN.equals(message.getType())) {
-                if ("ok".equals(message.getFields().get("status"))) requestState();
+                if ("ok".equals(message.getFields().get("status"))) {
+                    String authenticatedTvId = serverTvId;
+                    main.post(() -> {
+                        if (generations.isCurrent(generation)) listener.onTvIdentity(authenticatedTvId);
+                    });
+                    requestState();
+                }
             } else if (ProtocolTypes.PAIR_REJECT.equals(message.getType())) { pendingPairCode = null; error(message.requireField("reason")); }
             else if (ProtocolTypes.STATE_SNAPSHOT.equals(message.getType())) {
                 revisions.observe(message.getRevision());
                 logAcknowledgement(message.getRevision());
                 PhoneState state = stateFrom(message);
+                rejectionResync.receivedSnapshot();
                 main.post(() -> listener.onState(state));
             } else if (ProtocolTypes.EQ_BAND_ACK.equals(message.getType())) {
                 revisions.observe(message.getRevision());
                 logAcknowledgement(message.getRevision());
             } else if (ProtocolTypes.ERROR.equals(message.getType())) {
-                if ("stale_revision".equals(message.getFields().get("code"))) {
-                    Log.i(TAG, "stale revision; requesting state resync");
-                    requestState();
+                String errorCode = message.getFields().get("code");
+                if ("stale_revision".equals(errorCode) || "invalid_command".equals(errorCode)
+                        || "engine_unavailable".equals(errorCode) || "unsupported_command".equals(errorCode)) {
+                    revisions.rejected(message.getRevision());
+                    boolean requestResync = rejectionResync.requestNow(errorCode);
+                    if (requestResync && !"stale_revision".equals(errorCode)) {
+                        String detail = message.getFields().getOrDefault("detail", "Command failed");
+                        main.post(() -> listener.onCommandRejected(detail));
+                    }
+                    if (requestResync) {
+                        Log.i(TAG, "command rejected; requesting state resync");
+                        requestState();
+                    } else if ("engine_unavailable".equals(errorCode)) {
+                        error("The TV equalizer is starting or unavailable. Waiting for state.");
+                    }
+                } else if ("authentication_failed".equals(errorCode)) {
+                    token = "";
+                    main.post(listener::onPairingRequired);
                 } else error(message.getFields().getOrDefault("detail", "The TV reported an error"));
             }
         } catch (Exception exception) { error("Received an invalid TV response"); }
     }
 
-    private PhoneState stateFrom(ProtocolMessage message) {
-        String[] levels = message.requireField("levels_mb").split(",");
+    static PhoneState stateFrom(ProtocolMessage message) {
+        String rawLevels = message.requireField("levels_mb");
+        String[] levels = rawLevels.isEmpty() ? new String[0] : rawLevels.split(",");
         String[] centers = message.getFields().getOrDefault("centers_hz", "").split(",");
         String[] minimums = message.requireField("min_mb").split(",");
         String[] maximums = message.requireField("max_mb").split(",");
@@ -175,10 +214,26 @@ public final class TvConnectionClient {
             bands.add(new PhoneState.Band(i, Integer.parseInt(centers[i]), minimum, maximum,
                     Integer.parseInt(levels[i])));
         }
-        return new PhoneState(PhoneState.Connection.CONNECTED, "Live local control", message.getFields().getOrDefault("tv_name", "TV"),
+        return new PhoneState(PhoneState.Connection.CONNECTED, engineStatus(message.getFields().getOrDefault("engine", "ok")), message.getFields().getOrDefault("tv_name", "TV"),
                 message.getFields().getOrDefault("route_name", message.requireField("route_id")), message.getFields().getOrDefault("preset_name", "Custom"),
-                Boolean.parseBoolean(message.requireField("enabled")), message.getRevision(), bands);
+                Boolean.parseBoolean(message.requireField("enabled")), message.getRevision(), bands,
+                java.util.Arrays.asList(message.getFields().getOrDefault("features", "").split(",")).contains("presets"),
+                com.tonewire.protocol.PresetCatalog.decode(message.getFields().getOrDefault("presets", "")));
     }
+    static boolean engineReady(PhoneState state) {
+        return state.connection == PhoneState.Connection.CONNECTED && "Live local control".equals(state.status);
+    }
+
+    private static String engineStatus(String engine) {
+        switch (engine) {
+            case "ok": return "Live local control";
+            case "no_control": return "Another app controls the equalizer. Changes cannot be applied.";
+            case "unavailable": return "The TV equalizer is unavailable. Changes cannot be applied.";
+            case "route_ambiguous": return "The active output is unclear. Check the TV's connected outputs.";
+            default: return "The TV cannot confirm equalizer status. Changes may not apply.";
+        }
+    }
+
     private void send(ProtocolMessage message) {
         long generation = generations.current();
         try {

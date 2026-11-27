@@ -1,0 +1,6 @@
+file	type	emission	note
+state-snapshot-healthy.txt	state.snapshot	emitted	EngineCommandDispatcher healthy engine snapshot
+state-snapshot-engine-unavailable.txt	state.snapshot	emitted	EngineCommandDispatcher unavailable engine snapshot
+eq-band-ack.txt	eq.band.ack	emitted	EngineCommandDispatcher band acknowledgement
+pong.txt	pong	emitted	EngineCommandDispatcher ping response
+error-invalid-command.txt	error	emitted	EngineCommandDispatcher invalid_command error

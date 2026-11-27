@@ -36,9 +36,19 @@ public final class PhoneState {
     public final boolean enabled;
     public final long revision;
     public final List<Band> bands;
+    public final boolean supportsSavedPresets;
+    public final List<com.tonewire.protocol.PresetCatalog.Entry> presets;
 
     public PhoneState(Connection connection, String status, String tvName, String route, String preset,
             boolean enabled, long revision, List<Band> bands) {
+        this(connection, status, tvName, route, preset, enabled, revision, bands, false, Collections.emptyList());
+    }
+
+    public PhoneState(Connection connection, String status, String tvName, String route, String preset,
+            boolean enabled, long revision, List<Band> bands, boolean supportsSavedPresets,
+            List<com.tonewire.protocol.PresetCatalog.Entry> presets) {
+        this.supportsSavedPresets = supportsSavedPresets;
+        this.presets = Collections.unmodifiableList(new ArrayList<>(presets));
         this.connection = connection;
         this.status = status;
         this.tvName = tvName;
@@ -55,7 +65,7 @@ public final class PhoneState {
     }
 
     public PhoneState withConnection(Connection value, String message) {
-        return new PhoneState(value, message, tvName, route, preset, enabled, revision, bands);
+        return new PhoneState(value, message, tvName, route, preset, enabled, revision, bands, supportsSavedPresets, presets);
     }
 
     public PhoneState withBandLevel(int index, int level) {
@@ -66,11 +76,11 @@ public final class PhoneState {
                 break;
             }
         }
-        return new PhoneState(connection, status, tvName, route, preset, enabled, revision, replacement);
+        return new PhoneState(connection, status, tvName, route, preset, enabled, revision, replacement, supportsSavedPresets, presets);
     }
 
     public PhoneState withEnabled(boolean value) {
-        return new PhoneState(connection, status, tvName, route, preset, value, revision, bands);
+        return new PhoneState(connection, status, tvName, route, preset, value, revision, bands, supportsSavedPresets, presets);
     }
 
     public static int clamp(int value, int min, int max) {

@@ -20,4 +20,19 @@ public final class OptimisticRevisionTest {
         revisions.observe(4L);
         assertEquals(4L, revisions.current());
     }
+    @Test public void movedEndpointStartsWithNewConnectionsRevisionZero() {
+        OptimisticRevision revisions = new OptimisticRevision();
+        revisions.observe(7);
+        revisions.resetForConnection();
+        assertEquals(0, revisions.current());
+        assertEquals(0, revisions.allocateExpected());
+        revisions.observe(1);
+        assertEquals(1, revisions.current());
+    }
+    @Test public void rejectedMutationResynchronizesToServersActualRevision() {
+        OptimisticRevision revisions = new OptimisticRevision();
+        revisions.allocateExpected(); revisions.allocateExpected();
+        revisions.rejected(0);
+        assertEquals(0, revisions.allocateExpected());
+    }
 }
