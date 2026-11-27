@@ -30,4 +30,13 @@ public final class AudioRouteTest {
         assertFalse(new RouteSnapshot(Collections.singletonList(
                 new AudioRoute(AudioRoute.Kind.SPEAKER, "speaker", "", 1))).isAmbiguous());
     }
+    @Test public void equivalentOutputsSelectStableIdentityIndependentOfEnumerationOrder() {
+        AudioRoute first = new AudioRoute(AudioRoute.Kind.HDMI, "TV", "hdmi:0", 2);
+        AudioRoute duplicate = new AudioRoute(AudioRoute.Kind.HDMI, "TV", "hdmi:0", 9);
+        RouteSnapshot forward = new RouteSnapshot(Arrays.asList(first, duplicate));
+        RouteSnapshot reverse = new RouteSnapshot(Arrays.asList(duplicate, first));
+        assertFalse(forward.isAmbiguous());
+        assertEquals(first, forward.getSelectedRoute());
+        assertEquals(first, reverse.getSelectedRoute());
+    }
 }

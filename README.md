@@ -13,20 +13,27 @@ The project contains two deliverables:
 - An Android phone remote that discovers and pairs with the TV, displays advertised equalizer
   capabilities, and streams live band changes.
 
-The verified target is a CloudWalker Android 9/API 28 TV with a five-band NXP equalizer. The
-architecture queries capabilities at runtime rather than assuming that every device has five
-bands.
+The primary target is the Living Room TV: an Allwinner UHD Streaming STB (`athena-p7`),
+Android 12/API 31, connected over HDMI. TV and phone require API 31 or newer; older Android
+versions are no longer supported. The shared protocol remains a plain JVM library with an
+API 31 Android-consumer contract. Capabilities are queried at runtime.
 
 ## Features
 
 - Five-band live equalizer controls
 - Runtime capability and gain-range discovery
-- Built-in speaker and USB route support
-- Route-specific preset recall
-- DNS-SD discovery and manual IP fallback
-- Short-lived pairing code and Keystore-backed token storage
+- Route-specific preset recall, including edits saved to the active output
+- Truthful status: TV and output names plus engine health, so a phone cannot show
+  working sliders while the effect is gone
+- Live state push to every connected phone, on each phone's own revision
+- DNS-SD discovery with a stable TV identity, so the phone follows an IP change
+- Manual IP fallback
+- Up to eight named TV-owned presets, with Save/Delete controls on capable TVs
+- Short-lived pairing code, five-attempt lockout, Keystore-backed tokens, and Forget all phones
+- Read-only TV sound status with a D-pad-friendly pairing action
+- Make cut-only curve shifting and warnings above +6 dB
 - Bounded framed protocol with HMAC authentication and revisions
-- Boot-started TV service with clean state restoration
+- Foreground TV service that survives the activity closing and restores state on restart
 - Dependency-free interactive web concept at the repository root
 
 ## Preview the concept
@@ -66,12 +73,12 @@ attended physical-device workflow.
 
 ## Physical validation
 
-The built-in-speaker PCM path passed physical end-to-end validation: a phone emulator paired with
+Historical validation on the former CloudWalker device covered its built-in-speaker PCM path: a phone emulator paired with
 the TV over the production LAN protocol, changed the equalizer during playback, and restored the
 original state.
 
-USB validation remains pending reconnection of the Bluetooth transmitter. Compressed and direct
-passthrough paths may bypass the software effect and remain unverified. Evidence and limitations
+The supported configuration is a single HDMI output. No multi-output priority ladder is planned.
+Compressed/direct passthrough can bypass the effect and remains unverified on the primary device. Evidence and limitations
 are documented in [`android/docs/PHYSICAL_TEST_REPORT.md`](android/docs/PHYSICAL_TEST_REPORT.md).
 
 ## Security scope
@@ -97,3 +104,11 @@ index.html     Interactive product concept
 ## License
 
 Released under the [MIT License](LICENSE).
+
+## Approved development scope
+
+Implement M1–M6, then S1–S5 from the feature proposal. S1 is limited to deterministic, non-crashing
+behavior when another output appears; HDMI is the supported route. Nice-to-haves N1–N4 and the
+rejected list are out of scope. M1 covers genuine-entry-point foreground startup, bounded EQ-open
+retries, enable-state persistence and a live status notification. See
+[the development plan](docs/DEVELOPMENT_PLAN.md) for gates and guarded physical testing.

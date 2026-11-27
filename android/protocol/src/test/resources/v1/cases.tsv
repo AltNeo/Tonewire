@@ -1,0 +1,14 @@
+file	type	emission	note
+hello-tv.txt	hello	emitted	TvNetworkServer server hello plus additive tv_id
+pair-accept.txt	pair.accept	emitted	TvNetworkServer pairing accept with token fields
+pair-reject.txt	pair.reject	emitted	invalid_or_expired_code pairing rejection
+auth-token-ok.txt	auth.token	emitted	server authentication acknowledgement
+state-snapshot-healthy.txt	state.snapshot	emitted	EngineCommandDispatcher healthy engine snapshot
+state-snapshot-engine-unavailable.txt	state.snapshot	emitted	EngineCommandDispatcher unavailable engine snapshot
+eq-band-ack.txt	eq.band.ack	emitted	EngineCommandDispatcher band acknowledgement
+pong.txt	pong	emitted	EngineCommandDispatcher ping response
+error-engine-unavailable.txt	error	emitted	default dispatcher engine_unavailable error
+error-invalid-command.txt	error	emitted	EngineCommandDispatcher invalid_command error
+route-changed.txt	route.changed	modeled-not-emitted	factory exists but no current TV emission path
+state-snapshot-legacy-minimal.txt	state.snapshot	factory-only-legacy-minimal	ProtocolMessages.stateSnapshot helper bytes; not authoritative for dispatcher snapshots
+state-snapshot-unknown-field.txt	state.snapshot	synthetic-tolerance	healthy snapshot plus two unknown additive fields

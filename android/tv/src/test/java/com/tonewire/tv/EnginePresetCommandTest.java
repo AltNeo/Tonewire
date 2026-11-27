@@ -9,6 +9,7 @@ import com.tonewire.protocol.ProtocolTypes;
 import com.tonewire.tv.network.EngineCommandDispatcher;
 
 import java.util.Collections;
+import java.util.Arrays;
 
 import org.junit.Test;
 
@@ -21,16 +22,38 @@ public final class EnginePresetCommandTest {
 
         assertEquals(ProtocolTypes.STATE_SNAPSHOT, result.getType());
         assertEquals(8, result.getRevision());
-        assertEquals(TonewirePresets.CLEAR_DIALOGUE, result.requireField("preset_name"));
+        assertEquals("Clear dialogue", result.requireField("preset_name"));
         assertEquals("speaker:built-in", controller.assignedFingerprint);
         assertSame(controller.appliedPreset, controller.assignedPreset);
         assertSame(controller.appliedPreset, PresetSelector.select(controller.assignedPreset, null, 5));
+    }
+
+    @Test public void secondDistinctOutputDoesNotRejectGlobalPresetOrAssignArbitraryRoute() {
+        FakeController controller = new FakeController();
+        controller.routes = new RouteSnapshot(Arrays.asList(controller.route,
+                new AudioRoute(AudioRoute.Kind.HDMI, "TV", "hdmi:0", 2)));
+        ProtocolMessage result = new EngineCommandDispatcher(controller)
+                .dispatch(ProtocolMessages.presetApply(7, TonewirePresets.NIGHT_WATCH));
+        assertEquals(ProtocolTypes.STATE_SNAPSHOT, result.getType());
+        assertEquals(TonewirePresets.NIGHT_WATCH, controller.appliedPreset.getName());
+        assertEquals(null, controller.assignedFingerprint);
+    }
+
+    @Test public void duplicateEquivalentOutputRetainsRoutePresetAssignment() {
+        FakeController controller = new FakeController();
+        controller.routes = new RouteSnapshot(Arrays.asList(controller.route,
+                new AudioRoute(AudioRoute.Kind.SPEAKER, "Built-in", "", 9)));
+        ProtocolMessage result = new EngineCommandDispatcher(controller)
+                .dispatch(ProtocolMessages.presetApply(7, TonewirePresets.NIGHT_WATCH));
+        assertEquals(ProtocolTypes.STATE_SNAPSHOT, result.getType());
+        assertEquals("speaker:built-in", controller.assignedFingerprint);
     }
 
     private static final class FakeController implements TvEqualizerController {
         private final EqCapabilities capabilities = new EqCapabilities(-1500, 1500,
                 new int[] {60_000, 230_000, 910_000, 3_600_000, 14_000_000}, new int[5][2], new String[0]);
         private final AudioRoute route = new AudioRoute(AudioRoute.Kind.SPEAKER, "Built-in", "", 1);
+        private RouteSnapshot routes = new RouteSnapshot(Collections.singletonList(route));
         private EqPreset appliedPreset;
         private EqPreset assignedPreset;
         private String assignedFingerprint;
@@ -39,7 +62,7 @@ public final class EnginePresetCommandTest {
             return new EqualizerEngine.State(capabilities, new int[] {0, 0, 0, 0, 0}, true, true);
         }
         @Override public String getActivePresetName() { return appliedPreset == null ? "custom" : appliedPreset.getName(); }
-        @Override public RouteSnapshot getRoutes() { return new RouteSnapshot(Collections.singletonList(route)); }
+        @Override public RouteSnapshot getRoutes() { return routes; }
         @Override public int setBandLevel(int band, int requestedMillibels) { return requestedMillibels; }
         @Override public void setEnabled(boolean enabled) { }
         @Override public void applyPreset(EqPreset preset) { appliedPreset = preset; }

@@ -6,6 +6,13 @@ public final class TonewirePresets {
     public static final String CLEAR_DIALOGUE = "clear_dialogue";
     public static final String NIGHT_WATCH = "night_watch";
 
+    public static java.util.List<com.tonewire.protocol.PresetCatalog.Entry> catalog() {
+        return java.util.Arrays.asList(
+                new com.tonewire.protocol.PresetCatalog.Entry(FLAT_REFERENCE, "Flat reference", true),
+                new com.tonewire.protocol.PresetCatalog.Entry(CLEAR_DIALOGUE, "Clear dialogue", true),
+                new com.tonewire.protocol.PresetCatalog.Entry(NIGHT_WATCH, "Night watch", true));
+    }
+
     private TonewirePresets() {}
 
     public static EqPreset create(String presetId, EqCapabilities capabilities) {
@@ -17,6 +24,16 @@ public final class TonewirePresets {
                     capabilities.getMinimumMillibels(), capabilities.getMaximumMillibels());
         }
         return new EqPreset(presetId, levels);
+    }
+
+    public static String displayName(String name) {
+        if (name == null || name.trim().isEmpty() || "custom".equalsIgnoreCase(name.trim())) return "Custom";
+        switch (name) {
+            case FLAT_REFERENCE: return "Flat reference";
+            case CLEAR_DIALOGUE: return "Clear dialogue";
+            case NIGHT_WATCH: return "Night watch";
+            default: return name.trim();
+        }
     }
 
     private static int targetLevel(String presetId, int centerHertz) {

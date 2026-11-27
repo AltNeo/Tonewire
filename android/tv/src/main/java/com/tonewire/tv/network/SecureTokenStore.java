@@ -25,7 +25,21 @@ public final class SecureTokenStore {
     private final SharedPreferences preferences;
 
     public SecureTokenStore(Context context) {
-        preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE);
+        this(context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE));
+    }
+
+    SecureTokenStore(SharedPreferences preferences) {
+        this.preferences = preferences;
+    }
+
+    public synchronized void clear() {
+        if (!preferences.edit().clear().commit()) throw new IllegalStateException("Could not forget paired phones");
+    }
+
+    public synchronized int count() {
+        int count = 0;
+        for (String key : preferences.getAll().keySet()) if (key.startsWith(TOKEN_PREFIX)) count++;
+        return count;
     }
 
     public synchronized void save(String deviceId, String token) {
@@ -88,7 +102,8 @@ public final class SecureTokenStore {
     }
 
     private static String safeId(String id) {
-        return id == null || id.trim().isEmpty() ? "default" : id;
+        if (!TvNetworkServer.validPeerId(id)) throw new IllegalArgumentException("invalid peerId");
+        return id;
     }
     static byte[] packCiphertext(byte[] nonce, byte[] encrypted) {
         if (nonce == null || nonce.length != GCM_IV_LENGTH_BYTES || encrypted == null || encrypted.length == 0) {

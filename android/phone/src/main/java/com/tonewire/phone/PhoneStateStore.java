@@ -16,8 +16,13 @@ public final class PhoneStateStore {
     }
 
     public void saveEndpoint(String host, int port, String name) {
-        preferences.edit().putString("host", host).putInt("port", port).putString("name", name).apply();
+        SharedPreferences.Editor editor = preferences.edit().putString("host", host).putInt("port", port).putString("name", name);
+        if (!host.equals(host()) || port != port()) editor.remove("tv_id");
+        editor.apply();
     }
+
+    public String tvId() { return preferences.getString("tv_id", ""); }
+    public void saveTvId(String tvId) { preferences.edit().putString("tv_id", tvId).apply(); }
 
     public String host() { return preferences.getString("host", ""); }
     public int port() { return preferences.getInt("port", 49321); }
