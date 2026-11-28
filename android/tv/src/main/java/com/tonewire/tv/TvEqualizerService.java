@@ -14,6 +14,7 @@ import android.content.Intent;
 import android.os.IBinder;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.util.Log;
 
 /**
@@ -23,6 +24,8 @@ public final class TvEqualizerService extends Service {
     private static final String CHANNEL_ID = "tonewire_service_state";
     private static final int NOTIFICATION_ID = 1;
     private static final String TAG = "TonewireEq";
+    private static final int MAX_START_ATTEMPTS = 6;
+    private static final long START_RETRY_BACKOFF_MILLIS = 200L;
     private static final long[] RETRY_DELAYS_MS = {500, 1000, 2000};
     private int openAttempts;
     private volatile boolean destroyed;
@@ -30,17 +33,45 @@ public final class TvEqualizerService extends Service {
     private final Runnable openEngine = new Runnable() { @Override public void run() { startEngine(); } };
 
     /** Called only by the visible Activity or genuine BOOT_COMPLETED receiver. */
+    /**
+     * Starts the service from a context the platform will accept.
+     *
+     * <p>{@code startForegroundService} can return null on API 31 without throwing: it does this
+     * when the caller is not yet considered the top app, which happens intermittently when the
+     * request is made during activity startup. A single call is therefore unreliable, and the
+     * service genuinely does not start in that case. Retry briefly on a handler rather than
+     * treating the first null as final.
+     *
+     * @return true if a start was accepted synchronously
+     */
     public static boolean requestStart(Context context, String entryPoint) {
+        Context appContext = context.getApplicationContext() == null ? context : context.getApplicationContext();
+        if (tryStartForeground(appContext, entryPoint)) return true;
+        scheduleStartRetry(appContext, entryPoint, 1);
+        return false;
+    }
+
+    private static void scheduleStartRetry(Context context, String entryPoint, int attempt) {
+        final int next = attempt;
+        Handler retryHandler = new Handler(Looper.getMainLooper());
+        retryHandler.postDelayed(() -> {
+            if (tryStartForeground(context, entryPoint + " (retry " + next + ")")) return;
+            if (next < MAX_START_ATTEMPTS) scheduleStartRetry(context, entryPoint, next + 1);
+            else Log.e(TAG, "Foreground service start failed after " + MAX_START_ATTEMPTS + " retries from " + entryPoint);
+        }, START_RETRY_BACKOFF_MILLIS * attempt);
+    }
+
+    private static boolean tryStartForeground(Context context, String entryPoint) {
         try {
             ComponentName component = context.startForegroundService(new Intent(context, TvEqualizerService.class));
             if (component == null) {
-                Log.e(TAG, "Service start returned null from " + entryPoint);
+                Log.w(TAG, "Service start returned null from " + entryPoint + "; will retry");
                 return false;
             }
             Log.i(TAG, "Service start accepted from " + entryPoint + ": " + component);
             return true;
         } catch (ForegroundServiceStartNotAllowedException failure) {
-            Log.e(TAG, "Foreground service start not allowed from " + entryPoint, failure);
+            Log.w(TAG, "Foreground service start not allowed from " + entryPoint, failure);
             return false;
         } catch (SecurityException failure) {
             Log.e(TAG, "Foreground service permission denied from " + entryPoint, failure);

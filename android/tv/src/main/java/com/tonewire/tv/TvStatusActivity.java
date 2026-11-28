@@ -9,9 +9,21 @@ import com.tonewire.tv.network.TvNetworkServer;
 
 /** Read-only TV control surface; all sound controls remain on the phone. */
 public final class TvStatusActivity extends Activity {
+    private static final long START_RETRY_DELAY_MILLIS = 300L;
+
     private final Handler handler = new Handler();
+    private final Runnable startRetry =
+            new Runnable() {
+                @Override
+                public void run() {
+                    if (serviceStartRequested) return;
+                    serviceStartRequested = true;
+                    TvEqualizerService.requestStart(TvStatusActivity.this, "user launch (focus retry)");
+                }
+            };
     private TvStatusLayout layout;
     private boolean pairingRequested;
+    private boolean serviceStartRequested;
     private TvNetworkServer server;
     private final Runnable statusUpdater =
             new Runnable() {
@@ -60,13 +72,38 @@ public final class TvStatusActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        TvEqualizerService.requestStart(this, "user launch");
+        // Starting a foreground service from onResume can return null silently on API 31:
+        // the activity may be resumed but not yet the focused/top app, and the platform
+        // refuses the start without throwing. Waiting for window focus makes the start
+        // reliable, and retrying covers the case where focus never arrives.
+        requestServiceStartWhenFocused();
         handler.post(statusUpdater);
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus && !serviceStartRequested) {
+            serviceStartRequested = true;
+            TvEqualizerService.requestStart(this, "user launch");
+        }
+    }
+
+    private void requestServiceStartWhenFocused() {
+        if (hasWindowFocus()) {
+            serviceStartRequested = true;
+            TvEqualizerService.requestStart(this, "user launch");
+        } else if (!serviceStartRequested) {
+            // onWindowFocusChanged may have already fired before onResume, so retry shortly
+            // rather than depending on a callback that will not come again.
+            handler.postDelayed(startRetry, START_RETRY_DELAY_MILLIS);
+        }
     }
 
     @Override
     protected void onPause() {
         handler.removeCallbacks(statusUpdater);
+        handler.removeCallbacks(startRetry);
         super.onPause();
     }
 
