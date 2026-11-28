@@ -47,6 +47,21 @@ npx serve .
 The mockup demonstrates live tuning, route switching, preset recall, first-time pairing, TV
 status, and the phone navigation model. It has no build step or runtime dependencies.
 
+## Download
+
+Prebuilt APKs are attached to [Releases](../../releases). Each release includes both the TV app and
+the phone remote, with checksums.
+
+```bash
+adb install -r tonewire-tv-<version>.apk
+adb install -r tonewire-phone-<version>.apk
+```
+
+Always upgrade in place with `-r`. Uninstalling the TV app erases its paired-phone credentials and
+saved presets.
+
+See [`docs/RELEASING.md`](docs/RELEASING.md) for how releases are built and signed.
+
 ## Build the Android apps
 
 Requirements:

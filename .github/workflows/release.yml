@@ -1,0 +1,170 @@
+name: Release
+
+# Builds signed APKs and publishes them as a GitHub Release.
+#
+# Trigger by pushing a version tag, e.g.:
+#   git tag -a v0.2.0 -m "0.2.0"
+#   git push origin v0.2.0
+#
+# Signing: the release APKs are signed with the same keystore the debug builds use, so
+# upgrading over an installed debug build keeps app data and pairing credentials. The
+# keystore is supplied from repository secrets and is never committed.
+#
+# Required secrets:
+#   ANDROID_KEYSTORE_BASE64  - base64 of the keystore file
+#   ANDROID_KEYSTORE_PASSWORD- keystore password  (debug keystores conventionally use "android")
+#   ANDROID_KEY_ALIAS        - key alias          (conventionally "androiddebugkey")
+#   ANDROID_KEY_PASSWORD     - key password       (same as store for debug keystores)
+#
+# If those secrets are absent the workflow still publishes, but the APKs will be the
+# unsigned release artefacts plus the debug builds, and the release notes say so.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish (e.g. v0.2.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify, test, and build
+        run: ./gradlew verify build --no-daemon --stacktrace
+
+      - name: Restore keystore
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "No signing secrets configured; APKs will be unsigned."
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          echo "present=true" >> "$GITHUB_OUTPUT"
+
+      - name: Sign release APKs
+        if: steps.keystore.outputs.present == 'true'
+        env:
+          STORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          APKSIGNER="$BUILD_TOOLS/apksigner"
+          mkdir -p dist
+
+          sign() {
+            local input="$1" output="$2"
+            cp "$input" "$output"
+            "$APKSIGNER" sign \
+              --ks "$RUNNER_TEMP/release.keystore" \
+              --ks-pass "pass:$STORE_PASS" \
+              --ks-key-alias "$KEY_ALIAS" \
+              --key-pass "pass:$KEY_PASS" \
+              "$output"
+            "$APKSIGNER" verify "$output"
+          }
+
+          sign tv/build/outputs/apk/release/tv-release-unsigned.apk \
+               "dist/tonewire-tv-${{ steps.version.outputs.version }}.apk"
+          sign phone/build/outputs/apk/release/phone-release-unsigned.apk \
+               "dist/tonewire-phone-${{ steps.version.outputs.version }}.apk"
+
+          # Debug builds are already signed with the same keystore locally, but on CI they
+          # are signed with a throwaway key, so only ship the properly signed releases.
+
+      - name: Collect artefacts (unsigned fallback)
+        if: steps.keystore.outputs.present != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp tv/build/outputs/apk/release/tv-release-unsigned.apk \
+             "dist/tonewire-tv-${{ steps.version.outputs.version }}-UNSIGNED.apk"
+          cp phone/build/outputs/apk/release/phone-release-unsigned.apk \
+             "dist/tonewire-phone-${{ steps.version.outputs.version }}-UNSIGNED.apk"
+
+      - name: Write checksums
+        run: |
+          cd dist
+          sha256sum *.apk > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+          SIGNED: ${{ steps.keystore.outputs.present }}
+        run: |
+          set -euo pipefail
+
+          if [ "$SIGNED" = "true" ]; then
+            SIGN_NOTE="APKs are signed and can be installed with \`adb install -r\` over an existing build, which preserves pairing data."
+          else
+            SIGN_NOTE="**APKs are unsigned** because no signing secrets are configured. They will not install without signing. See the workflow header for the required secrets."
+          fi
+
+          cat > notes.md <<EOF
+          Tonewire ${VERSION}
+
+          Two APKs: the TV service app and the phone remote.
+
+          ${SIGN_NOTE}
+
+          Install over an existing build rather than uninstalling, or the TV loses its paired phones.
+
+          Verify the download against \`SHA256SUMS.txt\`.
+          EOF
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+          else
+            gh release create "$TAG" dist/* \
+              --title "Tonewire ${VERSION}" \
+              --notes-file notes.md \
+              --verify-tag
+          fi
